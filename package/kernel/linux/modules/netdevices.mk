@@ -33,6 +33,18 @@ endef
 $(eval $(call KernelPackage,skge))
 
 
+define KernelPackage/alx
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Qualcomm Atheros AR816x/AR817x PCI-E Ethernet Network Driver
+  DEPENDS:=@PCI_SUPPORT +kmod-mdio
+  KCONFIG:=CONFIG_ALX
+  FILES:=$(LINUX_DIR)/drivers/net/ethernet/atheros/alx/alx.ko
+  AUTOLOAD:=$(call AutoProbe,alx)
+endef
+
+$(eval $(call KernelPackage,alx))
+
+
 define KernelPackage/atl2
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Atheros L2 Fast Ethernet support
@@ -113,7 +125,7 @@ $(eval $(call KernelPackage,mii))
 define KernelPackage/mdio-gpio
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:= Supports GPIO lib-based MDIO busses
-  DEPENDS:=+kmod-libphy @GPIO_SUPPORT +(TARGET_armvirt||TARGET_brcm2708_bcm2708||TARGET_samsung):kmod-of-mdio
+  DEPENDS:=+kmod-libphy @GPIO_SUPPORT +(TARGET_armvirt||TARGET_bcm27xx_bcm2708||TARGET_samsung||TARGET_tegra):kmod-of-mdio
   KCONFIG:= \
 	CONFIG_MDIO_BITBANG \
 	CONFIG_MDIO_GPIO
@@ -180,6 +192,23 @@ endef
 $(eval $(call KernelPackage,phy-broadcom))
 
 
+define KernelPackage/phy-bcm84881
+   SUBMENU:=$(NETWORK_DEVICES_MENU)
+   TITLE:=Broadcom BCM84881 PHY driver
+   KCONFIG:=CONFIG_BCM84881_PHY
+   DEPENDS:=+kmod-libphy
+   FILES:=$(LINUX_DIR)/drivers/net/phy/bcm84881.ko
+   AUTOLOAD:=$(call AutoLoad,18,bcm84881,1)
+endef
+
+define KernelPackage/phy-bcm84881/description
+   Supports the Broadcom 84881 PHY.
+endef
+
+$(eval $(call KernelPackage,phy-bcm84881))
+
+
+
 define KernelPackage/phy-realtek
    SUBMENU:=$(NETWORK_DEVICES_MENU)
    TITLE:=Realtek Ethernet PHY driver
@@ -210,6 +239,36 @@ define KernelPackage/swconfig/description
 endef
 
 $(eval $(call KernelPackage,swconfig))
+
+define KernelPackage/switch-bcm53xx
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Broadcom bcm53xx switch support
+  DEPENDS:=+kmod-swconfig
+  KCONFIG:=CONFIG_SWCONFIG_B53
+  FILES:=$(LINUX_DIR)/drivers/net/phy/b53/b53_common.ko
+  AUTOLOAD:=$(call AutoLoad,42,b53_common)
+endef
+
+define KernelPackage/switch-bcm53xx/description
+  Broadcom bcm53xx switch support
+endef
+
+$(eval $(call KernelPackage,switch-bcm53xx))
+
+define KernelPackage/switch-bcm53xx-mdio
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Broadcom bcm53xx switch MDIO support
+  DEPENDS:=+kmod-switch-bcm53xx
+  KCONFIG:=CONFIG_SWCONFIG_B53_PHY_DRIVER
+  FILES:=$(LINUX_DIR)/drivers/net/phy/b53/b53_mdio.ko
+  AUTOLOAD:=$(call AutoLoad,42,b53_mdio)
+endef
+
+define KernelPackage/switch-bcm53xx-mdio/description
+  Broadcom bcm53xx switch MDIO support
+endef
+
+$(eval $(call KernelPackage,switch-bcm53xx-mdio))
 
 define KernelPackage/switch-mvsw61xx
   SUBMENU:=$(NETWORK_DEVICES_MENU)
@@ -261,13 +320,13 @@ $(eval $(call KernelPackage,switch-rtl8306))
 define KernelPackage/switch-rtl8366-smi
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=Realtek RTL8366 SMI switch interface support
-  DEPENDS:=@GPIO_SUPPORT +kmod-swconfig +(TARGET_armvirt||TARGET_brcm2708_bcm2708||TARGET_samsung):kmod-of-mdio
+  DEPENDS:=@GPIO_SUPPORT +kmod-swconfig +(TARGET_armvirt||TARGET_bcm27xx_bcm2708||TARGET_samsung||TARGET_tegra):kmod-of-mdio
   KCONFIG:=CONFIG_RTL8366_SMI
   FILES:=$(LINUX_DIR)/drivers/net/phy/rtl8366_smi.ko
   AUTOLOAD:=$(call AutoLoad,42,rtl8366_smi)
 endef
 
-define KernelPackage/switch-rtl8366_smi/description
+define KernelPackage/switch-rtl8366-smi/description
   Realtek RTL8366 series SMI switch interface support
 endef
 
@@ -482,7 +541,7 @@ $(eval $(call KernelPackage,8139cp))
 define KernelPackage/r8169
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   TITLE:=RealTek RTL-8169 PCI Gigabit Ethernet Adapter kernel support
-  DEPENDS:=@PCI_SUPPORT +kmod-mii +r8169-firmware +LINUX_4_19:kmod-phy-realtek
+  DEPENDS:=@PCI_SUPPORT +kmod-mii +r8169-firmware +!LINUX_4_14:kmod-phy-realtek
   KCONFIG:=CONFIG_R8169 \
     CONFIG_R8169_NAPI=y \
     CONFIG_R8169_VLAN=n
@@ -645,7 +704,7 @@ $(eval $(call KernelPackage,ixgbevf))
 define KernelPackage/b44
   TITLE:=Broadcom 44xx driver
   KCONFIG:=CONFIG_B44
-  DEPENDS:=@PCI_SUPPORT @!TARGET_brcm47xx_mips74k +!TARGET_brcm47xx:kmod-ssb +kmod-mii +kmod-libphy
+  DEPENDS:=@PCI_SUPPORT @!TARGET_bcm47xx_mips74k +!TARGET_bcm47xx:kmod-ssb +kmod-mii +kmod-libphy
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/broadcom/b44.ko
   AUTOLOAD:=$(call AutoLoad,19,b44,1)
@@ -700,7 +759,7 @@ define KernelPackage/tg3
   TITLE:=Broadcom Tigon3 Gigabit Ethernet
   KCONFIG:=CONFIG_TIGON3 \
 	CONFIG_TIGON3_HWMON=n
-  DEPENDS:=+!TARGET_brcm47xx:kmod-libphy +(LINUX_3_18||LINUX_4_9):kmod-hwmon-core +kmod-ptp
+  DEPENDS:=+!TARGET_bcm47xx:kmod-libphy +kmod-ptp
   SUBMENU:=$(NETWORK_DEVICES_MENU)
   FILES:=$(LINUX_DIR)/drivers/net/ethernet/broadcom/tg3.ko
   AUTOLOAD:=$(call AutoLoad,19,tg3,1)
@@ -916,7 +975,7 @@ define KernelPackage/of-mdio
   DEPENDS:=+kmod-libphy
   KCONFIG:=CONFIG_OF_MDIO
   FILES:= \
-	$(LINUX_DIR)/drivers/net/phy/fixed_phy.ko@ge4.9 \
+	$(LINUX_DIR)/drivers/net/phy/fixed_phy.ko \
 	$(LINUX_DIR)/drivers/of/of_mdio.ko
   AUTOLOAD:=$(call AutoLoad,41,of_mdio)
 endef
@@ -930,7 +989,7 @@ $(eval $(call KernelPackage,of-mdio))
 
 define KernelPackage/vmxnet3
   SUBMENU:=$(NETWORK_DEVICES_MENU)
-  TITLE:=VMware VMXNET3 ethernet driver 
+  TITLE:=VMware VMXNET3 ethernet driver
   DEPENDS:=@PCI_SUPPORT
   KCONFIG:=CONFIG_VMXNET3
   FILES:=$(LINUX_DIR)/drivers/net/vmxnet3/vmxnet3.ko
@@ -991,3 +1050,42 @@ define KernelPackage/bnx2/description
 endef
 
 $(eval $(call KernelPackage,bnx2))
+
+
+define KernelPackage/bnx2x
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=QLogic 5771x/578xx 10/20-Gigabit ethernet adapter driver
+  DEPENDS:=@PCI_SUPPORT +bnx2x-firmware +kmod-lib-crc32c +kmod-mdio +kmod-ptp +kmod-lib-zlib-inflate
+  FILES:=$(LINUX_DIR)/drivers/net/ethernet/broadcom/bnx2x/bnx2x.ko
+  KCONFIG:= \
+	CONFIG_BNX2X \
+	CONFIG_BNX2X_SRIOV=y
+  AUTOLOAD:=$(call AutoProbe,bnx2x)
+endef
+
+define KernelPackage/bnx2x/description
+  QLogic BCM57710/57711/57711E/57712/57712_MF/57800/57800_MF/57810/57810_MF/57840/57840_MF Driver
+endef
+
+$(eval $(call KernelPackage,bnx2x))
+
+define KernelPackage/be2net
+  SUBMENU:=$(NETWORK_DEVICES_MENU)
+  TITLE:=Broadcom Emulex OneConnect 10Gbps NIC
+  DEPENDS:=@PCI_SUPPORT +kmod-hwmon-core
+  FILES:=$(LINUX_DIR)/drivers/net/ethernet/emulex/benet/be2net.ko
+  KCONFIG:= \
+	CONFIG_BE2NET \
+	CONFIG_BE2NET_BE2=y \
+	CONFIG_BE2NET_BE3=y \
+	CONFIG_BE2NET_LANCER=y \
+	CONFIG_BE2NET_SKYHAWK=y \
+	CONFIG_BE2NET_HWMON=y
+  AUTOLOAD:=$(call AutoProbe,be2net)
+endef
+
+define KernelPackage/be2net/description
+  Broadcom Emulex OneConnect 10Gbit SFP+ support, OneConnect OCe10xxx OCe11xxx OCe14xxx, LightPulse LPe12xxx
+endef
+
+$(eval $(call KernelPackage,be2net))

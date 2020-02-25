@@ -8,16 +8,17 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=mbedtls
-PKG_VERSION:=2.16.0
-PKG_RELEASE:=2
+PKG_VERSION:=2.16.5
+PKG_RELEASE:=1
 PKG_USE_MIPS16:=0
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION)-gpl.tgz
 PKG_SOURCE_URL:=https://tls.mbed.org/download/
-PKG_HASH:=c8d7a4696287cb9533c455bdd65859106dbdd4472c125194387486e6d4df2799
+PKG_HASH:=6ebdea6565c714f1315b9af6a802afb4b4e89976f7d5d2b15aa8028eb52e7d09
 
 PKG_BUILD_PARALLEL:=1
-PKG_LICENSE:=GPL-2.0+
+PKG_LICENSE:=GPL-2.0-or-later
+PKG_LICENSE_FILES:=gpl-2.0.txt
 PKG_CPE_ID:=cpe:/a:arm:mbed_tls
 
 PKG_CONFIG_DEPENDS:=CONFIG_LIBMBEDTLS_DEBUG_C
@@ -51,10 +52,10 @@ config LIBMBEDTLS_DEBUG_C
 	default n
 	help
 	 This option enables mbedtls library's debug functions.
-	
+
 	 It increases the uncompressed libmbedtls binary size
 	 by around 60 KiB (for an ARMv5 platform).
-	
+
 	 Usually, you don't need this, so don't select this if you're unsure.
 endef
 

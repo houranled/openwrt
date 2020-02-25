@@ -1,6 +1,6 @@
 From: Felix Fietkau <nbd@nbd.name>
 Date: Tue, 12 Feb 2019 14:22:43 +0100
-Subject: [PATCH] wpa_supplicant: fix race condition in mesh mpm new peer
+Subject: [PATCH v2] wpa_supplicant: fix race condition in mesh mpm new peer
  handling
 
 When wpa_supplicant receives another new peer event before the first one
@@ -14,7 +14,7 @@ Signed-off-by: Felix Fietkau <nbd@nbd.name>
 
 --- a/wpa_supplicant/mesh_mpm.c
 +++ b/wpa_supplicant/mesh_mpm.c
-@@ -663,11 +663,12 @@ static struct sta_info * mesh_mpm_add_pe
+@@ -710,11 +710,12 @@ static struct sta_info * mesh_mpm_add_pe
  	}
  
  	sta = ap_get_sta(data, addr);
@@ -24,7 +24,7 @@ Signed-off-by: Felix Fietkau <nbd@nbd.name>
 -			return NULL;
 -	}
 +	if (sta)
-+		return sta;
++		return NULL;
 +
 +	sta = ap_sta_add(data, addr);
 +	if (!sta)

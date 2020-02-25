@@ -1,4 +1,9 @@
-DEVICE_VARS += UBNT_BOARD UBNT_CHIP UBNT_TYPE
+DEVICE_VARS += UBNT_BOARD UBNT_CHIP UBNT_TYPE UBNT_VERSION UBNT_REVISION
+
+# On M (XW) devices the U-Boot as of version 1.1.4-s1039 doesn't like
+# VERSION_DIST being on the place of major(?) version number, so we need to
+# use some number.
+UBNT_REVISION := $(VERSION_DIST)-$(REVISION)
 
 # mkubntimage is using the kernel image direct
 # routerboard creates partitions out of the ubnt header
@@ -17,7 +22,7 @@ define Build/mkubntimage-split
 	dd if=$@ of=$@.old1 bs=1024k count=1; \
 	dd if=$@ of=$@.old2 bs=1024k skip=1; \
 	$(STAGING_DIR_HOST)/bin/mkfwimage \
-		-B $(UBNT_BOARD) -v $(UBNT_TYPE).$(UBNT_CHIP).v6.0.0-$(VERSION_DIST)-$(REVISION) \
+		-B $(UBNT_BOARD) -v $(UBNT_TYPE).$(UBNT_CHIP).v$(UBNT_VERSION)-$(UBNT_REVISION) \
 		-k $@.old1 \
 		-r $@.old2 \
 		-o $@; \
@@ -36,12 +41,14 @@ endef
 # UBNT_BOARD e.g. one of (XS2, XS5, RS, XM)
 # UBNT_TYPE e.g. one of (BZ, XM, XW)
 # UBNT_CHIP e.g. one of (ar7240, ar933x, ar934x)
+# UBNT_VERSION e.g. one of (6.0.0, 8.5.0)
 define Device/ubnt
-  DEVICE_PACKAGES := kmod-usb-core kmod-usb2
+  DEVICE_PACKAGES := kmod-usb2
   DEVICE_PROFILE := UBNT
   IMAGE_SIZE := 7552k
   MTDPARTS := spi0.0:256k(u-boot)ro,64k(u-boot-env)ro,7552k(firmware),256k(cfg)ro,64k(EEPROM)ro
   UBNT_BOARD := XM
+  UBNT_VERSION := 6.0.0
   IMAGES := sysupgrade.bin factory.bin
   IMAGE/sysupgrade.bin := append-kernel | pad-to $$$$(BLOCKSIZE) | append-rootfs | pad-rootfs | check-size $$$$(IMAGE_SIZE)
   IMAGE/factory.bin := $$(IMAGE/sysupgrade.bin) | mkubntimage-split
@@ -49,7 +56,7 @@ endef
 
 define Device/ubnt-xm
   $(Device/ubnt)
-  DEVICE_PACKAGES += kmod-usb-ohci rssileds
+  DEVICE_PACKAGES += kmod-usb-ohci
   UBNT_TYPE := XM
   UBNT_CHIP := ar7240
   KERNEL := kernel-bin | patch-cmdline | relocate-kernel | lzma | uImage lzma
@@ -57,9 +64,10 @@ endef
 
 define Device/ubnt-xw
   $(Device/ubnt)
-  DEVICE_PACKAGES += rssileds
   UBNT_TYPE := XW
   UBNT_CHIP := ar934x
+  UBNT_VERSION := 6.0.4
+  UBNT_REVISION := 42.$(UBNT_REVISION)
 endef
 
 define Device/ubnt-bz
@@ -85,6 +93,7 @@ TARGET_DEVICES += ubnt-airrouter
 define Device/ubnt-bullet-m
   $(Device/ubnt-xm)
   DEVICE_TITLE := Ubiquiti Bullet-M
+  DEVICE_PACKAGES += rssileds
   BOARDNAME := UBNT-BM
 endef
 TARGET_DEVICES += ubnt-bullet-m
@@ -92,6 +101,7 @@ TARGET_DEVICES += ubnt-bullet-m
 define Device/ubnt-rocket-m
   $(Device/ubnt-xm)
   DEVICE_TITLE := Ubiquiti Rocket-M
+  DEVICE_PACKAGES += rssileds
   BOARDNAME := UBNT-RM
 endef
 TARGET_DEVICES += ubnt-rocket-m
@@ -99,6 +109,7 @@ TARGET_DEVICES += ubnt-rocket-m
 define Device/ubnt-nano-m
   $(Device/ubnt-xm)
   DEVICE_TITLE := Ubiquiti Nano-M
+  DEVICE_PACKAGES += rssileds
   BOARDNAME := UBNT-NM
 endef
 TARGET_DEVICES += ubnt-nano-m
@@ -112,7 +123,7 @@ endef
 TARGET_DEVICES += ubnt-unifi
 
 define Device/ubnt-unifiac
-  DEVICE_PACKAGES := kmod-usb-core kmod-usb2
+  DEVICE_PACKAGES := kmod-usb2
   DEVICE_PROFILE := UBNT
   IMAGE_SIZE := 7744k
   MTDPARTS := spi0.0:384k(u-boot)ro,64k(u-boot-env)ro,7744k(firmware),7744k(ubnt-airos)ro,128k(bs),256k(cfg)ro,64k(EEPROM)ro
@@ -128,6 +139,12 @@ define Device/ubnt-unifiac-lite
   BOARDNAME := UBNT-UF-AC-LITE
 endef
 TARGET_DEVICES += ubnt-unifiac-lite
+
+define Device/ubnt-unifiac-lr
+  $(Device/ubnt-unifiac-lite)
+  DEVICE_TITLE := Ubiquiti UniFi AC-LR
+endef
+TARGET_DEVICES += ubnt-unifiac-lr
 
 define Device/ubnt-unifiac-mesh
   $(Device/ubnt-unifiac-lite)
@@ -161,6 +178,7 @@ TARGET_DEVICES += ubnt-unifi-outdoor
 define Device/ubnt-nano-m-xw
   $(Device/ubnt-xw)
   DEVICE_TITLE := Ubiquiti Nano M XW
+  DEVICE_PACKAGES += rssileds
   BOARDNAME := UBNT-NM-XW
 endef
 TARGET_DEVICES += ubnt-nano-m-xw
@@ -175,13 +193,23 @@ TARGET_DEVICES += ubnt-lbe-m5
 define Device/ubnt-loco-m-xw
   $(Device/ubnt-xw)
   DEVICE_TITLE := Ubiquiti Loco XW
+  DEVICE_PACKAGES += rssileds
   BOARDNAME := UBNT-LOCO-XW
 endef
 TARGET_DEVICES += ubnt-loco-m-xw
 
+define Device/ubnt-bullet-m-xw
+  $(Device/ubnt-xw)
+  DEVICE_TITLE := Ubiquiti Bullet-M XW
+  DEVICE_PACKAGES += rssileds
+  BOARDNAME := UBNT-BM-XW
+endef
+TARGET_DEVICES += ubnt-bullet-m-xw
+
 define Device/ubnt-rocket-m-xw
   $(Device/ubnt-xw)
   DEVICE_TITLE := Ubiquiti Rocket M XW
+  DEVICE_PACKAGES += rssileds
   BOARDNAME := UBNT-RM-XW
 endef
 TARGET_DEVICES += ubnt-rocket-m-xw
@@ -189,6 +217,7 @@ TARGET_DEVICES += ubnt-rocket-m-xw
 define Device/ubnt-rocket-m-ti
   $(Device/ubnt-xw)
   DEVICE_TITLE := Ubiquiti Rocket M TI
+  DEVICE_PACKAGES += rssileds
   BOARDNAME := UBNT-RM-TI
   UBNT_TYPE := TI
 endef
@@ -223,7 +252,7 @@ endef
 TARGET_DEVICES += ubdev01
 
 define Device/ubnt-routerstation
-  DEVICE_PACKAGES := kmod-usb-core kmod-usb-ohci kmod-usb2
+  DEVICE_PACKAGES := kmod-usb-ohci kmod-usb2
   DEVICE_PROFILE := UBNT
   IMAGE_SIZE := 16128k
   IMAGES := sysupgrade.bin factory.bin

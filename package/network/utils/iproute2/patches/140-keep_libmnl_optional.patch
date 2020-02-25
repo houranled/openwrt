@@ -1,6 +1,6 @@
 --- a/configure
 +++ b/configure
-@@ -254,7 +254,7 @@ check_selinux()
+@@ -257,7 +257,7 @@ check_selinux()
  
  check_mnl()
  {

@@ -8,18 +8,16 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=iproute2
-PKG_VERSION:=4.20.0
-PKG_RELEASE:=2
+PKG_VERSION:=5.5.0
+PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
 PKG_SOURCE_URL:=@KERNEL/linux/utils/net/iproute2
-PKG_HASH:=c8adaa6a40f888476b23acb283cfa30c0dd55f07b5aa20663ed5ba2ef1f6fda8
+PKG_HASH:=bac543435cac208a11db44c9cc8e35aa902befef8750594654ee71941c388f7b
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_DEPENDS:=iptables
 PKG_LICENSE:=GPL-2.0
 PKG_CPE_ID:=cpe:/a:iproute2_project:iproute2
-
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
 
 include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/package.mk
@@ -49,7 +47,7 @@ $(call Package/iproute2/Default)
  VARIANT:=full
  PROVIDES:=ip
  ALTERNATIVES:=300:/sbin/ip:/usr/libexec/ip-full
- DEPENDS:=+libnl-tiny +libelf +(PACKAGE_devlink||PACKAGE_rdma):libmnl
+ DEPENDS:=+libnl-tiny +libelf +(PACKAGE_devlink||PACKAGE_rdma):libmnl +libcap
 endef
 
 define Package/tc
@@ -57,43 +55,43 @@ $(call Package/iproute2/Default)
   TITLE:=Traffic control utility
   VARIANT:=tc
   PROVIDES:=tc
-  DEPENDS:=+kmod-sched-core +libxtables +libelf +(PACKAGE_devlink||PACKAGE_rdma):libmnl
+  DEPENDS:=+kmod-sched-core +libxtables +libelf +(PACKAGE_devlink||PACKAGE_rdma):libmnl +PACKAGE_ip-full:libcap
 endef
 
 define Package/genl
 $(call Package/iproute2/Default)
   TITLE:=General netlink utility frontend
-  DEPENDS:=+libnl-tiny +(PACKAGE_devlink||PACKAGE_rdma):libmnl
+  DEPENDS:=+libnl-tiny +(PACKAGE_devlink||PACKAGE_rdma):libmnl +(PACKAGE_tc||PACKAGE_ip-full):libelf +PACKAGE_ip-full:libcap
 endef
 
 define Package/ip-bridge
 $(call Package/iproute2/Default)
   TITLE:=Bridge configuration utility from iproute2
-  DEPENDS:=+libnl-tiny +(PACKAGE_devlink||PACKAGE_rdma):libmnl
+  DEPENDS:=+libnl-tiny +(PACKAGE_devlink||PACKAGE_rdma):libmnl +(PACKAGE_tc||PACKAGE_ip-full):libelf +PACKAGE_ip-full:libcap
 endef
 
 define Package/ss
 $(call Package/iproute2/Default)
   TITLE:=Socket statistics utility
-  DEPENDS:=+libnl-tiny +(PACKAGE_devlink||PACKAGE_rdma):libmnl
+  DEPENDS:=+libnl-tiny +(PACKAGE_devlink||PACKAGE_rdma):libmnl +(PACKAGE_tc||PACKAGE_ip-full):libelf +PACKAGE_ip-full:libcap
 endef
 
 define Package/nstat
 $(call Package/iproute2/Default)
   TITLE:=Network statistics utility
-  DEPENDS:=+libnl-tiny +(PACKAGE_devlink||PACKAGE_rdma):libmnl
+  DEPENDS:=+libnl-tiny +(PACKAGE_devlink||PACKAGE_rdma):libmnl +(PACKAGE_tc||PACKAGE_ip-full):libelf +PACKAGE_ip-full:libcap
 endef
 
 define Package/devlink
 $(call Package/iproute2/Default)
   TITLE:=Network devlink utility
-  DEPENDS:=+libmnl
+  DEPENDS:=+libmnl +(PACKAGE_tc||PACKAGE_ip-full):libelf +PACKAGE_ip-full:libcap
 endef
 
 define Package/rdma
 $(call Package/iproute2/Default)
   TITLE:=Network rdma utility
-  DEPENDS:=+libmnl
+  DEPENDS:=+libmnl +(PACKAGE_tc||PACKAGE_ip-full):libelf +PACKAGE_ip-full:libcap
 endef
 
 ifeq ($(BUILD_VARIANT),tiny)
@@ -102,6 +100,7 @@ endif
 
 ifeq ($(BUILD_VARIANT),full)
   HAVE_ELF:=y
+  HAVE_CAP:=y
 endif
 
 ifeq ($(BUILD_VARIANT),tc)
@@ -122,7 +121,7 @@ define Build/Configure
 		> $(PKG_BUILD_DIR)/include/SNAPSHOT.h
 endef
 
-TARGET_CFLAGS += -ffunction-sections -fdata-sections
+TARGET_CFLAGS += -ffunction-sections -fdata-sections -flto
 TARGET_LDFLAGS += -Wl,--gc-sections
 TARGET_CPPFLAGS += -I$(STAGING_DIR)/usr/include/libnl-tiny
 
@@ -132,6 +131,7 @@ MAKE_FLAGS += \
 	IP_CONFIG_TINY=$(IP_CONFIG_TINY) \
 	HAVE_ELF=$(HAVE_ELF) \
 	HAVE_MNL=$(HAVE_MNL) \
+	HAVE_CAP=$(HAVE_CAP) \
 	IPT_LIB_DIR=/usr/lib/iptables \
 	XT_LIB_DIR=/usr/lib/iptables \
 	FPIC="$(FPIC)"
@@ -140,15 +140,12 @@ define Build/Compile
 	+$(MAKE_VARS) $(MAKE) $(PKG_JOBS) -C $(PKG_BUILD_DIR) $(MAKE_FLAGS)
 endef
 
-# use minimal functionality for dev libraries
-ifeq ($(BUILD_VARIANT),tiny)
 define Build/InstallDev
 	$(INSTALL_DIR) $(1)/usr/include
 	$(CP) $(PKG_BUILD_DIR)/include/{libgenl,libnetlink}.h $(1)/usr/include/
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_BUILD_DIR)/lib/libnetlink.a $(1)/usr/lib/
 endef
-endif
 
 define Package/ip-tiny/install
 	$(INSTALL_DIR) $(1)/usr/libexec
@@ -171,8 +168,6 @@ ifeq ($(SHARED_LIBS),y)
 endif
 endef
 
-# ensure other packages are only saved during 'tiny' builds.
-ifeq ($(BUILD_VARIANT),tiny)
 define Package/genl/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/genl/genl $(1)/usr/sbin/
@@ -202,7 +197,6 @@ define Package/rdma/install
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/rdma/rdma $(1)/usr/sbin/
 endef
-endif
 
 $(eval $(call BuildPackage,ip-tiny))
 $(eval $(call BuildPackage,ip-full))

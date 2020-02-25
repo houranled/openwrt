@@ -103,7 +103,7 @@ Signed-off-by: Biwen Li <biwen.li@nxp.com>
 +	$ keyctl load secure kmk-master "load 'cat secure_key.blob'" @u
 --- a/MAINTAINERS
 +++ b/MAINTAINERS
-@@ -7645,6 +7645,18 @@ F:	include/keys/trusted-type.h
+@@ -7646,6 +7646,18 @@ F:	include/keys/trusted-type.h
  F:	security/keys/trusted.c
  F:	security/keys/trusted.h
  
@@ -124,7 +124,7 @@ Signed-off-by: Biwen Li <biwen.li@nxp.com>
  L:	keyrings@vger.kernel.org
 --- a/drivers/tee/optee/Kconfig
 +++ b/drivers/tee/optee/Kconfig
-@@ -5,3 +5,11 @@ config OPTEE
+@@ -6,3 +6,11 @@ config OPTEE
  	help
  	  This implements the OP-TEE Trusted Execution Environment (TEE)
  	  driver.

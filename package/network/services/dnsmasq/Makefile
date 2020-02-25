@@ -8,10 +8,11 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=dnsmasq
-PKG_VERSION:=2.80
-PKG_RELEASE:=8
+PKG_UPSTREAM_VERSION:=2.80
+PKG_VERSION:=$(subst test,~~test,$(subst rc,~rc,$(PKG_UPSTREAM_VERSION)))
+PKG_RELEASE:=18
 
-PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.xz
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_UPSTREAM_VERSION).tar.xz
 PKG_SOURCE_URL:=http://thekelleys.org.uk/dnsmasq
 PKG_HASH:=cdaba2785e92665cf090646cba6f94812760b9d7d8c8d0cfb07ac819377a63bb
 
@@ -19,10 +20,11 @@ PKG_LICENSE:=GPL-2.0
 PKG_LICENSE_FILES:=COPYING
 PKG_CPE_ID:=cpe:/a:thekelleys:dnsmasq
 
-PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_VERSION)
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(BUILD_VARIANT)/$(PKG_NAME)-$(PKG_UPSTREAM_VERSION)
 
 PKG_INSTALL:=1
 PKG_BUILD_PARALLEL:=1
+PKG_ASLR_PIE_REGULAR:=1
 PKG_CONFIG_DEPENDS:= CONFIG_PACKAGE_dnsmasq_$(BUILD_VARIANT)_dhcp \
 	CONFIG_PACKAGE_dnsmasq_$(BUILD_VARIANT)_dhcpv6 \
 	CONFIG_PACKAGE_dnsmasq_$(BUILD_VARIANT)_dnssec \
@@ -125,8 +127,8 @@ endef
 Package/dnsmasq-dhcpv6/conffiles = $(Package/dnsmasq/conffiles)
 Package/dnsmasq-full/conffiles = $(Package/dnsmasq/conffiles)
 
-TARGET_CFLAGS += -ffunction-sections -fdata-sections
-TARGET_LDFLAGS += -Wl,--gc-sections
+TARGET_CFLAGS += -flto
+TARGET_LDFLAGS += -flto=jobserver
 
 COPTS = -DHAVE_UBUS \
 	$(if $(CONFIG_IPV6),,-DNO_IPV6)
@@ -177,6 +179,8 @@ define Package/dnsmasq/install
 	$(INSTALL_BIN) ./files/dhcp-script.sh $(1)/usr/lib/dnsmasq/dhcp-script.sh
 	$(INSTALL_DIR) $(1)/usr/share/acl.d
 	$(INSTALL_DATA) ./files/dnsmasq_acl.json $(1)/usr/share/acl.d/
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/50-dnsmasq-migrate-resolv-conf-auto.sh $(1)/etc/uci-defaults
 endef
 
 Package/dnsmasq-dhcpv6/install = $(Package/dnsmasq/install)
